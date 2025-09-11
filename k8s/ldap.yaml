@@ -1,0 +1,118 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ldap
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ldap-admin-password
+  namespace: ldap
+type: Opaque
+stringData:
+  adminpassword: admin123 
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ldap-bootstrap
+  namespace: ldap
+data:
+  bootstrap.ldif: |
+    dn: ou=users,dc=traefik,dc=io
+    objectClass: organizationalUnit
+    ou: users
+
+    dn: uid=jdoe,ou=users,dc=traefik,dc=org
+    objectClass: inetOrgPerson
+    objectClass: posixAccount
+    cn: John Doe
+    sn: Doe
+    uid: jdoe
+    mail: jdoe@traefik.io
+    uidNumber: 1000
+    gidNumber: 1000
+    homeDirectory: /home/jdoe
+    userPassword: 1234
+
+    dn: uid=asmith,ou=users,dc=traefik,dc=io
+    objectClass: inetOrgPerson
+    objectClass: posixAccount
+    cn: Alice Smith
+    sn: Smith
+    uid: asmith
+    mail: asmith@traefik.io
+    uidNumber: 1001
+    gidNumber: 1001
+    homeDirectory: /home/asmith
+    userPassword: alicepwd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openldap
+  namespace: ldap
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openldap
+  template:
+    metadata:
+      labels:
+        app: openldap
+    spec:
+      initContainers:
+      - name: init-ldif
+        image: busybox:1.36
+        command: ["sh", "-c", "cp /ldif-config/*.ldif /ldif-data/"]
+        volumeMounts:
+        - name: bootstrap-config
+          mountPath: /ldif-config
+        - name: bootstrap-data
+          mountPath: /ldif-data
+      containers:
+      - name: openldap
+        image: osixia/openldap:1.5.0
+        ports:
+        - containerPort: 389
+        - containerPort: 636
+        env:
+        - name: LDAP_ORGANISATION
+          value: "Traefik Io"
+        - name: LDAP_DOMAIN
+          value: "traefik.io"
+        - name: LDAP_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ldap-admin-password
+              key: adminpassword
+        - name: LDAP_CUSTOM_LDIF_DIR
+          value: "/ldif-data"
+        volumeMounts:
+        - name: bootstrap-data
+          mountPath: /ldif-data
+      volumes:
+      - name: bootstrap-config
+        configMap:
+          name: ldap-bootstrap
+      - name: bootstrap-data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openldap
+  namespace: ldap
+spec:
+  type: ClusterIP
+  selector:
+    app: openldap
+  ports:
+  - name: ldap
+    port: 389
+    targetPort: 389
+  - name: ldaps
+    port: 636
+    targetPort: 636
