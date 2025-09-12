@@ -1,18 +1,17 @@
-Ldap server for deployemnt
+# Ldap server for deployment
 
-This is just an example of how to deploy a simple ldap server on kubernetes.
+This is an example of how to deploy a simple ldap server on kubernetes.
 It is configured with an initial bootstrap LDIF that creates two sample users (jdoe and asmith) with traefik.io domain.
 
-#Deployment
+## Openldap server deployment
 
-Apply all manifests:
+Apply the manifests:
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/Fernando-Benegas/ldap-server-example/refs/heads/main/k8s/ldap.yaml
 ```
 
 Verify the pod is running:
-
 
 ```shell
 kubectl get pods -n ldap
@@ -24,13 +23,15 @@ Expected status:
 NAME                        READY   STATUS    RESTARTS   AGE
 openldap-6bbd87d5c5-gh4cq   1/1     Running   0          28m
 ```
+
 Load the ldif data into the openldap container:
 
 ```shell
 kubectl exec -n ldap deploy/openldap -c openldap -- ldapadd -x -D "cn=admin,dc=traefik,dc=io" -w admin123 -f /ldif-data/bootstrap.ldif
 ```
 
-Testing
+
+### Testing
 1. Port-forward the LDAP service
 
 Forward LDAP port 389 from Kubernetes to your local machine:
@@ -79,5 +80,67 @@ Alice Smith
 uid: asmith
 
 mail: asmith@traefik.io
+```
+
+
+## Whoami app deployment
+
+
+Apply the manifests:
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/Fernando-Benegas/ldap-server-example/refs/heads/main/k8s/whoami.yaml
+```
+
+Verify the pod is running:
+
+```shell
+kubectl get pods -n apps
+```
+
+Expected status:
+
+```shell
+NAME                        READY   STATUS    RESTARTS   AGE
+whoami-784cdc7fb4-7xxc2     1/1     Running   0          28m
+```
+
+
+### Testing
+
+1. Send a request to the whoami app without autentication: 
+
+```shell
+curl -v "https://localhost/whoami"
+```
+
+Expected status:
+
+```shell
+* Request completely sent off
+< HTTP/2 401 
+< content-length: 0
+```
+
+
+2. Now, add the ldap credentials on Authentication header:
+
+```shell
+curl -v -X GET "https://localhost/whoami" -H "Authorization: Basic amRvZToxMjM0"
+```
+
+Expected status:
+
+```shell
+> GET / HTTP/2
+> Host: localhost
+> User-Agent: curl/8.12.1
+> Accept: */*
+> Authorization: Basic amRvZToxMjM0
+> 
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+* Request completely sent off
+< HTTP/2 200 
+< content-type: text/html; charset=utf-8
 ```
 
