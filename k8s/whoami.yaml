@@ -1,0 +1,82 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apps
+---
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: whoami
+  namespace: apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: whoami
+  template:
+    metadata:
+      labels:
+        app: whoami
+    spec:
+      containers:
+      - name: whoami
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"  
+        image: traefik/traefikee-webapp-demo:v2
+        imagePullPolicy: Always
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: whoami
+  namespace: apps
+  labels:
+    app: whoami
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    name: whoami
+  selector:
+    app: whoami
+---
+
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: whoami-ingress
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`localhost`) && PathPrefix(`/whoami`)
+      services:
+        - name: whoami
+          port: 80
+      middlewares:
+        - name: ldap-auth
+  tls: {}
+---
+
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: ldap-auth
+  namespace: apps
+spec:
+  plugin:
+    ldap:
+      url: ldap://openldap.ldap.svc.cluster.local:389
+      baseDN: dc=traefik,dc=io
+      bindDN: "cn=admin,dc=traefik,dc=io"
+      bindPassword: "admin123"
