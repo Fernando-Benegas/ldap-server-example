@@ -79,7 +79,7 @@ spec:
         - containerPort: 389
         - containerPort: 636
         env:
-        - name: LDAP_ORGANISATION
+        - name: LDAP_ORGANIZATION
           value: "Traefik Io"
         - name: LDAP_DOMAIN
           value: "traefik.io"
