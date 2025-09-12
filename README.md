@@ -1,4 +1,4 @@
-##Ldap server for deployemnt
+Ldap server for deployemnt
 
 This is just an example of how to deploy a simple ldap server on kubernetes.
 It is configured with an initial bootstrap LDIF that creates two sample users (jdoe and asmith) with traefik.io domain.
