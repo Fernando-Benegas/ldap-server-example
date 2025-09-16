@@ -23,18 +23,20 @@ data:
     dn: ou=users,dc=traefik,dc=io
     objectClass: organizationalUnit
     ou: users
-
-    dn: uid=jdoe,ou=users,dc=traefik,dc=io
+    
+    dn: cn=jdoe,dc=traefik,dc=io
     objectClass: inetOrgPerson
-    objectClass: posixAccount
-    cn: John Doe
+    cn: jdoe
     sn: Doe
     uid: jdoe
-    mail: jdoe@traefik.io
-    uidNumber: 1000
-    gidNumber: 1000
-    homeDirectory: /home/jdoe
     userPassword: 1234
+
+    dn: cn=asmith,dc=traefik,dc=io
+    objectClass: inetOrgPerson
+    cn: asmith
+    sn: Smith
+    uid: asmith
+    userPassword: alicepwd
 
     dn: uid=asmith,ou=users,dc=traefik,dc=io
     objectClass: inetOrgPerson
