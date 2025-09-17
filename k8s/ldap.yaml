@@ -11,7 +11,7 @@ metadata:
   namespace: ldap
 type: Opaque
 stringData:
-  adminpassword: admin123 
+  adminpassword: admin123
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -23,7 +23,7 @@ data:
     dn: ou=users,dc=traefik,dc=io
     objectClass: organizationalUnit
     ou: users
-    
+
     dn: cn=jdoe,dc=traefik,dc=io
     objectClass: inetOrgPerson
     cn: jdoe
@@ -31,12 +31,17 @@ data:
     uid: jdoe
     userPassword: 1234
 
-    dn: cn=asmith,dc=traefik,dc=io
+    dn: uid=jdoe,ou=users,dc=traefik,dc=io
     objectClass: inetOrgPerson
-    cn: asmith
-    sn: Smith
-    uid: asmith
-    userPassword: alicepwd
+    objectClass: posixAccount
+    cn: Joe Doe
+    sn: Doe
+    uid: jdoe
+    mail: jdoe@traefik.io
+    uidNumber: 1000
+    gidNumber: 1000
+    homeDirectory: /home/jdoe
+    userPassword: 12345
 
     dn: uid=asmith,ou=users,dc=traefik,dc=io
     objectClass: inetOrgPerson
@@ -49,6 +54,8 @@ data:
     gidNumber: 1001
     homeDirectory: /home/asmith
     userPassword: alicepwd
+
+    
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -65,10 +72,16 @@ spec:
       labels:
         app: openldap
     spec:
+      volumes:
+      - name: bootstrap-config
+        configMap:
+          name: ldap-bootstrap
+      - name: bootstrap-data
+        emptyDir: {}
       initContainers:
       - name: init-ldif
         image: busybox:1.36
-        command: ["sh", "-c", "cp /ldif-config/*.ldif /ldif-data/"]
+        command: ["sh", "-c", "cp /ldif-config/bootstrap.ldif /ldif-data/"]
         volumeMounts:
         - name: bootstrap-config
           mountPath: /ldif-config
@@ -90,17 +103,29 @@ spec:
             secretKeyRef:
               name: ldap-admin-password
               key: adminpassword
-        - name: LDAP_CUSTOM_LDIF_DIR
-          value: "/ldif-data"
         volumeMounts:
         - name: bootstrap-data
           mountPath: /ldif-data
-      volumes:
-      - name: bootstrap-config
-        configMap:
-          name: ldap-bootstrap
-      - name: bootstrap-data
-        emptyDir: {}
+        lifecycle:
+          postStart:
+            exec:
+              command:
+                - "/bin/sh"
+                - "-c"
+                - >
+                  set -e;
+                  for i in $(seq 1 10); do
+                    ldapsearch -x -H ldap://localhost -b "" -s base "objectclass=*" >/dev/null 2>&1 && break;
+                    echo -n ".";
+                    sleep 1;
+                  done;
+                  if [ $(ldapsearch -x -H ldap://localhost -b "ou=users,dc=traefik,dc=io" -s base '(objectClass=*)' 2>/dev/null | grep -c "numEntries: 1") -eq 0 ]; then
+                    echo 'Importing LDIF data...';
+                    ldapadd -x -D "cn=admin,dc=traefik,dc=io" -w "$LDAP_ADMIN_PASSWORD" -f /ldif-data/bootstrap.ldif;
+                    echo 'LDIF data imported successfully.';
+                  else
+                    echo 'Data already exists, skipping import.';
+                  fi
 ---
 apiVersion: v1
 kind: Service
