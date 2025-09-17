@@ -24,12 +24,6 @@ NAME                        READY   STATUS    RESTARTS   AGE
 openldap-6bbd87d5c5-gh4cq   1/1     Running   0          28m
 ```
 
-Load the ldif data into the openldap container:
-
-```shell
-kubectl exec -n ldap deploy/openldap -c openldap -- ldapadd -x -D "cn=admin,dc=traefik,dc=io" -w admin123 -f /ldif-data/bootstrap.ldif
-```
-
 
 ### Testing
 1. Port-forward the LDAP service
