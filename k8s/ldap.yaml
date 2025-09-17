@@ -3,6 +3,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: ldap
+  
 ---
 apiVersion: v1
 kind: Secret
@@ -12,6 +13,7 @@ metadata:
 type: Opaque
 stringData:
   adminpassword: admin123
+  
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -31,30 +33,12 @@ data:
     uid: jdoe
     userPassword: 1234
 
-    dn: uid=jdoe,ou=users,dc=traefik,dc=io
+    dn: cn=asmith,dc=traefik,dc=io
     objectClass: inetOrgPerson
-    objectClass: posixAccount
-    cn: Joe Doe
-    sn: Doe
-    uid: jdoe
-    mail: jdoe@traefik.io
-    uidNumber: 1000
-    gidNumber: 1000
-    homeDirectory: /home/jdoe
-    userPassword: 12345
-
-    dn: uid=asmith,ou=users,dc=traefik,dc=io
-    objectClass: inetOrgPerson
-    objectClass: posixAccount
-    cn: Alice Smith
+    cn: asmith
     sn: Smith
     uid: asmith
-    mail: asmith@traefik.io
-    uidNumber: 1001
-    gidNumber: 1001
-    homeDirectory: /home/asmith
     userPassword: alicepwd
-
     
 ---
 apiVersion: apps/v1
